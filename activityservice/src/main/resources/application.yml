@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: activityservice
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/activityfitness
+      database: activityfitness
+
+server:
+  port: 8082
+
+rabbitmq:
+  exchange:
+    name: activity.exchange
+  routing:
+    key: activity.routing.key
+
+userservice:
+  url: http://localhost:8081
