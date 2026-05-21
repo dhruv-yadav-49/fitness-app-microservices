@@ -62,6 +62,7 @@ public class UserService {
 
         UserResponse userResponse = new UserResponse();
         userResponse.setId(user.getId());
+        userResponse.setKeycloakId(user.getKeycloakId());
         userResponse.setPassword(user.getPassword());
         userResponse.setEmail(user.getEmail());
         userResponse.setFirstName(user.getFirstName());
@@ -74,6 +75,6 @@ public class UserService {
 
     public Boolean existsByUserId(String userId){
         log.info("Calling User Validation API for userId: {}", userId);
-        return repo.existsByKeycloakId(userId);
+        return repo.existsById(userId) || (userId != null && repo.existsByKeycloakId(userId));
     }
 }
