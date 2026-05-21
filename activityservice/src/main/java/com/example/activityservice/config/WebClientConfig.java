@@ -12,6 +12,11 @@ public class WebClientConfig {
     private String userServiceUrl;
 
     @Bean
+    public WebClient.Builder webClientBuilder() {
+        return WebClient.builder();
+    }
+
+    @Bean
     public WebClient userServiceWebClient(WebClient.Builder builder) {
         return builder.baseUrl(userServiceUrl).build();
     }
