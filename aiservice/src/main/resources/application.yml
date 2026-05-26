@@ -14,3 +14,11 @@ eureka:
 
 server:
   port: 8083
+
+rabbitmq:
+  queue:
+    name: activity.queue
+  exchange:
+    name: activity.exchange
+  routing:
+    key: activity.routing.key
