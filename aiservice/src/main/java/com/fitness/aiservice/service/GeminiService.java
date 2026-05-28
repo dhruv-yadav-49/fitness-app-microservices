@@ -1,16 +1,98 @@
 package com.fitness.aiservice.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fitness.aiservice.model.Activity;
 import com.fitness.aiservice.model.Recommendation;
+import lombok.extern.slf4j.Slf4j;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@Slf4j
 public class GeminiService {
 
+    @Value("${gemini.api.key:}")
+    private String apiKey;
+
+    @Value("${gemini.api.url}")
+    private String apiUrl;
+
     public Recommendation generateRecommendation(Activity activity) {
+        if (apiKey == null || apiKey.trim().isEmpty() || apiKey.startsWith("${")) {
+            log.warn("Gemini API key is not configured. Falling back to simulated recommendation.");
+            return generateMockRecommendation(activity);
+        }
+
+        try {
+            log.info("Generating AI recommendation using Gemini API for activity: {}", activity.getId());
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            String prompt = String.format(
+                "Analyze the following fitness activity and provide personalized professional recommendations. " +
+                "You must return the response as a JSON object matching this schema exactly:\n" +
+                "{\n" +
+                "  \"recommendation\": \"A concise, supportive overview recommendation message\",\n" +
+                "  \"improvements\": [\"Concrete way to improve form, technique, or pacing\", \"Another improvement...\"],\n" +
+                "  \"suggestions\": [\"Practical training suggestions or next steps\", \"Another suggestion...\"],\n" +
+                "  \"safety\": [\"Safety tip or caution specific to this activity\", \"Another safety tip...\"]\n" +
+                "}\n\n" +
+                "Activity Details:\n" +
+                "- Type: %s\n" +
+                "- Duration: %d minutes\n" +
+                "- Calories Burned: %d kcal\n" +
+                "- Start Time: %s\n" +
+                "- Additional Metrics: %s\n",
+                activity.getType(),
+                activity.getDuration() != null ? activity.getDuration() : 0,
+                activity.getCaloriesBurned() != null ? activity.getCaloriesBurned() : 0,
+                activity.getStartTime() != null ? activity.getStartTime().toString() : "N/A",
+                activity.getAdditionalMetrics() != null ? activity.getAdditionalMetrics().toString() : "None"
+            );
+
+            GeminiRequest request = new GeminiRequest(prompt);
+            HttpEntity<GeminiRequest> entity = new HttpEntity<>(request, headers);
+
+            String requestUrl = apiUrl + "?key=" + apiKey;
+            GeminiResponse response = restTemplate.postForObject(requestUrl, entity, GeminiResponse.class);
+
+            if (response != null && response.getCandidates() != null && !response.getCandidates().isEmpty()) {
+                String jsonText = response.getCandidates().get(0).getContent().getParts().get(0).getText();
+                log.debug("Gemini raw JSON response: {}", jsonText);
+
+                ObjectMapper objectMapper = new ObjectMapper();
+                // Configure standard mapping
+                Recommendation aiRec = objectMapper.readValue(jsonText, Recommendation.class);
+
+                aiRec.setActivityId(activity.getId());
+                aiRec.setUserId(activity.getUserId());
+                if (aiRec.getCreatedAt() == null) {
+                    aiRec.setCreatedAt(LocalDateTime.now());
+                }
+                log.info("Successfully generated recommendation using Gemini API.");
+                return aiRec;
+            } else {
+                throw new RuntimeException("Empty response received from Gemini API");
+            }
+        } catch (Exception e) {
+            log.error("Failed to generate recommendation via Gemini API. Falling back to simulated recommendation. Error: {}", e.getMessage());
+            return generateMockRecommendation(activity);
+        }
+    }
+
+    private Recommendation generateMockRecommendation(Activity activity) {
         String type = activity.getType() != null ? activity.getType().toLowerCase() : "general";
         
         List<String> improvements = new ArrayList<>();
@@ -61,5 +143,55 @@ public class GeminiService {
                 .safety(safety)
                 .createdAt(LocalDateTime.now())
                 .build();
+    }
+
+    // --- Gemini DTOs ---
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GeminiRequest {
+        private List<Content> contents;
+        private GenerationConfig generationConfig;
+
+        public GeminiRequest(String prompt) {
+            this.contents = List.of(new Content(List.of(new Part(prompt))));
+            this.generationConfig = new GenerationConfig("application/json");
+        }
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Content {
+        private List<Part> parts;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Part {
+        private String text;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GenerationConfig {
+        private String responseMimeType;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GeminiResponse {
+        private List<Candidate> candidates;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Candidate {
+        private Content content;
     }
 }
