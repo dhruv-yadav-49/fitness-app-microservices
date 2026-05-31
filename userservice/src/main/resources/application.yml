@@ -1,34 +1,28 @@
 spring:
   application:
-    name: userservice
-
-  datasource:
-    url: jdbc:postgresql://localhost:5432/fitness-micro-user
-    username: postgres
-    password: dhruvyadav123
-    driver-class-name: org.postgresql.Driver
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-
+    name: user-service
   config:
-    import: "optional:configserver:"
+    import: optional:configserver:http://localhost:8888
+#   datasource:
+#     url: jdbc:postgresql://localhost:5432/fitness-micro-user
+#     username: postgres
+#     password: dhruvyadav123
+#     driver-class-name: org.postgresql.Driver
 
-  cloud:
-    discovery:
-      enabled: true
+#   jpa:
+#     hibernate:
+#       ddl-auto: update
+#     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
-server:
-  port: 8081
+# server:
+#   port: 8081
 
-eureka:
-  client:
-    enabled: true
-    register-with-eureka: true
-    fetch-registry: true
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
+# eureka:
+#   client:
+#     enabled: true
+#     register-with-eureka: true
+#     fetch-registry: true
+#     service-url:
+#       defaultZone: http://localhost:8761/eureka/
 
 

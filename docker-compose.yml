@@ -1,0 +1,56 @@
+services:
+  # PostgreSQL database for user-service
+  postgres:
+    image: postgres:15-alpine
+    container_name: fitness-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=dhruvyadav123
+      - POSTGRES_DB=fitness-micro-user
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: always
+
+  # MongoDB database for activityservice and aiservice
+  mongodb:
+    image: mongo:6.0
+    container_name: fitness-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: always
+
+  # RabbitMQ Broker for microservices communication
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: fitness-rabbitmq
+    ports:
+      - "5672:5672"       # RabbitMQ AMQP port
+      - "15672:15672"     # RabbitMQ Management Console
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: always
+
+  # Keycloak for Authentication and Authorization
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.2
+    container_name: fitness-keycloak
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+    ports:
+      - "8181:8080"       # Keycloak web console at http://localhost:8181
+    command: start-dev
+    restart: always
+
+
+volumes:
+  postgres-data:
+    driver: local
+  mongo-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
